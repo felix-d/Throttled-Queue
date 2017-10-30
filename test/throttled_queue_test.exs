@@ -1,6 +1,6 @@
 defmodule ThrottledQueueTest do
   use ExUnit.Case
-  # doctest ThrottledQueue
+  doctest ThrottledQueue
 
   test "ThrottledQueue.start_link starts the queue" do
     {:ok, pid} = ThrottledQueue.start_link
