@@ -103,7 +103,6 @@ defmodule ThrottledQueue do
       iex> ThrottledQueue.start_link(max_queue: 1)
       iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn -> Process.sleep(3000) end)
       iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn -> :bar end)
-      iex> {:ok, _ref, 1} = ThrottledQueue.enqueue(fn -> :hey end)
       iex> ThrottledQueue.enqueue(fn -> :hey end)
       :error
 
@@ -122,7 +121,7 @@ defmodule ThrottledQueue do
     new_queue = queue ++ [%Item{action: action, ref: ref, from: from}]
 
     cond do
-      len > max_queue ->
+      len >= max_queue ->
         {:reply, :error, state}
       len == 0 ->
         GenServer.cast(self(), :dequeue)

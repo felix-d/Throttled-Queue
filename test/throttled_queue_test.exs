@@ -59,6 +59,14 @@ defmodule ThrottledQueueTest do
     assert_receive {:result, ^ref4, :zoo}
   end
 
+  test "ThrottledQueue.enqueue returns :error is the queue is full" do
+    {:ok, _pid} = ThrottledQueue.start_link(max_queue: 1)
+
+    {:ok, _ref1, 0} = ThrottledQueue.enqueue(fn -> :foo end)
+    {:ok, _ref2, 0} = ThrottledQueue.enqueue(fn -> :bar end)
+    :error = ThrottledQueue.enqueue(fn -> :foobar end)
+  end
+
   defp state(info) do
     {_, _, _, status} = info
     [_, _, _, _, [_, _, {:data, [{'State', state}]}]] = status
