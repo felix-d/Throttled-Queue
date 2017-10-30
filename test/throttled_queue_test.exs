@@ -38,8 +38,29 @@ defmodule ThrottledQueueTest do
     %{max_queue: 10_000} = state(:sys.get_status(ThrottledQueue))
   end
 
-  defp state(name) do
-    {_, _, _, status} = :sys.get_status(ThrottledQueue)
+  test "ThrottledQueue.enqueue enqueues actions" do
+    {:ok, _pid} = ThrottledQueue.start_link(wait: 5)
+
+    {:ok, ref1, 0} = ThrottledQueue.enqueue(fn -> :foo end)
+    {:ok, ref2, 0} = ThrottledQueue.enqueue(fn -> :bar end)
+    {:ok, ref3, 1} = ThrottledQueue.enqueue(fn -> :foobar end)
+    {:ok, ref4, 2} = ThrottledQueue.enqueue(fn -> :zoo end)
+
+    assert_receive {:dequeued, ^ref1}
+    assert_receive {:result, ^ref1, :foo}
+    assert_receive {:dequeued, ^ref2}
+    assert_receive {:result, ^ref2, :bar}
+    assert_receive {:position, ^ref3, 0}
+    assert_receive {:dequeued, ^ref3}
+    assert_receive {:result, ^ref3, :foobar}
+    assert_receive {:position, ^ref4, 0}
+    assert_receive {:position, ^ref4, 1}
+    assert_receive {:dequeued, ^ref4}
+    assert_receive {:result, ^ref4, :zoo}
+  end
+
+  defp state(info) do
+    {_, _, _, status} = info
     [_, _, _, _, [_, _, {:data, [{'State', state}]}]] = status
     state
   end

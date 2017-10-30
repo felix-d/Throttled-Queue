@@ -1,3 +1,4 @@
+require IEx
 defmodule ThrottledQueue do
   @moduledoc """
   This throttled queue performs actions asynchronously and keep the client
@@ -192,10 +193,11 @@ defmodule ThrottledQueue do
     end
   end
 
+  defp notify_position([]), do: nil
   defp notify_position(queue) do
     queue
     |> Enum.with_index
-    |> Enum.each(fn {{from, ref, _action}, pos} ->
+    |> Enum.each(fn {%Item{from: from, ref: ref, action: _action}, pos} ->
       send from, {:position, ref, pos}
     end)
   end
