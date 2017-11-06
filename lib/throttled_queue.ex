@@ -20,10 +20,10 @@ defmodule ThrottledQueue do
       iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn ->
       ...> Process.sleep(3000)
       ...> :foo
-      ...> end) # Processed right away because it's the first element in the queue.
-      iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn -> :bar end)
-      iex> {:ok, _ref, 1} = ThrottledQueue.enqueue(fn -> :yeee end)
-      iex> {:ok, ref, 2} = ThrottledQueue.enqueue(fn -> :yeee end)
+      ...> end)
+      iex> {:ok, _ref, 1} = ThrottledQueue.enqueue(fn -> :bar end)
+      iex> {:ok, _ref, 2} = ThrottledQueue.enqueue(fn -> :yeee end)
+      iex> {:ok, ref, 3} = ThrottledQueue.enqueue(fn -> :yeee end)
       iex> is_reference(ref)
       true
 
@@ -100,9 +100,9 @@ defmodule ThrottledQueue do
 
   ## Examples
 
-      iex> ThrottledQueue.start_link(max_queue: 1)
+      iex> ThrottledQueue.start_link(max_queue: 2)
       iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn -> Process.sleep(3000) end)
-      iex> {:ok, _ref, 0} = ThrottledQueue.enqueue(fn -> :bar end)
+      iex> {:ok, _ref, 1} = ThrottledQueue.enqueue(fn -> :bar end)
       iex> ThrottledQueue.enqueue(fn -> :hey end)
       :error
 
@@ -134,7 +134,10 @@ defmodule ThrottledQueue do
   def handle_cast(:dequeue, %{wait: wait, last_dequeued: last_dequeued} = state) do
     spent = spent_time(last_dequeued)
     cond do
-      spent == nil || spent > wait ->
+      spent == nil ->
+        Process.send_after(self(), :delayed_process, wait)
+        {:noreply, state}
+      spent > wait ->
         process(state)
       true ->
         Process.send_after(self(), :delayed_process, wait - spent)

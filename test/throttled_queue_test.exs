@@ -42,28 +42,31 @@ defmodule ThrottledQueueTest do
     {:ok, _pid} = ThrottledQueue.start_link(wait: 5)
 
     {:ok, ref1, 0} = ThrottledQueue.enqueue(fn -> :foo end)
-    {:ok, ref2, 0} = ThrottledQueue.enqueue(fn -> :bar end)
-    {:ok, ref3, 1} = ThrottledQueue.enqueue(fn -> :foobar end)
-    {:ok, ref4, 2} = ThrottledQueue.enqueue(fn -> :zoo end)
+    {:ok, ref2, 1} = ThrottledQueue.enqueue(fn -> :bar end)
+    {:ok, ref3, 2} = ThrottledQueue.enqueue(fn -> :foobar end)
+    {:ok, ref4, 3} = ThrottledQueue.enqueue(fn -> :zoo end)
 
     assert_receive {:dequeued, ^ref1}
     assert_receive {:result, ^ref1, :foo}
+    assert_receive {:position, ^ref2, 0}
     assert_receive {:dequeued, ^ref2}
     assert_receive {:result, ^ref2, :bar}
+    assert_receive {:position, ^ref3, 1}
     assert_receive {:position, ^ref3, 0}
     assert_receive {:dequeued, ^ref3}
     assert_receive {:result, ^ref3, :foobar}
-    assert_receive {:position, ^ref4, 0}
+    assert_receive {:position, ^ref4, 2}
     assert_receive {:position, ^ref4, 1}
+    assert_receive {:position, ^ref4, 0}
     assert_receive {:dequeued, ^ref4}
     assert_receive {:result, ^ref4, :zoo}
   end
 
   test "ThrottledQueue.enqueue returns :error is the queue is full" do
-    {:ok, _pid} = ThrottledQueue.start_link(max_queue: 1)
+    {:ok, _pid} = ThrottledQueue.start_link(max_queue: 2)
 
     {:ok, _ref1, 0} = ThrottledQueue.enqueue(fn -> :foo end)
-    {:ok, _ref2, 0} = ThrottledQueue.enqueue(fn -> :bar end)
+    {:ok, _ref2, 1} = ThrottledQueue.enqueue(fn -> :bar end)
     :error = ThrottledQueue.enqueue(fn -> :foobar end)
   end
 
