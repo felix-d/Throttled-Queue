@@ -8,6 +8,12 @@ defmodule ThrottledQueueTest do
     assert :sys.get_status(ThrottledQueue)
   end
 
+  test "ThrottledQueue.start starts the queue" do
+    {:ok, pid} = ThrottledQueue.start(name: :foo)
+    assert is_pid(pid)
+    assert :sys.get_status(:foo)
+  end
+
   test "ThrottledQueue.start_link can take a custom name" do
     {:ok, pid} = ThrottledQueue.start_link(name: :my_queue)
     assert is_pid(pid)

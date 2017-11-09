@@ -50,7 +50,7 @@ defmodule ThrottledQueue do
   end
 
   @doc """
-  Starts the queue process.
+  Starts the queue process and links it.
 
   ## Parameters
 
@@ -70,19 +70,41 @@ defmodule ThrottledQueue do
 
   """
   def start_link(opts \\ []) do
-    opts = [
+    opts = get_opts(opts)
+    GenServer.start_link(@name, initial_state(opts), name: Keyword.get(opts, :name))
+  end
+
+  @doc """
+  Starts the queue process without linking it.
+
+  ## Parameters
+
+    - `name`: Atom. Identifier for the queue. Defaults to **ThrottledQueue** (optional).
+    - `wait`: Integer. The wait time between actions in milliseconds. Defaults to 500.
+    - `max_queue`: Integer. The maximum number of items in the queue. Defaults to 10_000
+
+  """
+  def start(opts \\ []) do
+    opts = get_opts(opts)
+    GenServer.start(@name, initial_state(opts), name: Keyword.get(opts, :name))
+  end
+
+  defp get_opts(opts) do
+    [
       max_queue: @default_max_queue,
       wait: @default_wait,
       name: @name,
     ] |> Keyword.merge(opts)
+  end
 
-    GenServer.start_link(@name, %{
+  def initial_state(opts) do
+    %{
       last_dequeued: nil,
       queue: [],
       pending: %{},
       wait: Keyword.get(opts, :wait),
       max_queue: Keyword.get(opts, :max_queue),
-    }, name: Keyword.get(opts, :name))
+    }
   end
 
   @doc """
