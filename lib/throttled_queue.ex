@@ -131,6 +131,22 @@ defmodule ThrottledQueue do
     {:ok, state}
   end
 
+
+  @doc """
+  Clears the queue.
+
+  ## Parameters
+
+    - `name`: Atom to identify the queue. Defaults to **#{@default_name}** (optional).
+
+  ## Examples
+
+      iex> ThrottledQueue.start_link(max_queue: 2)
+      iex> ThrottledQueue.enqueue(fn -> :foo end)
+      iex> ThrottledQueue.enqueue(fn -> :bar end)
+      iex> ThrottledQueue.clear
+      :ok
+  """
   def clear(name \\ @default_name) do
     GenServer.call(name, :clear)
   end

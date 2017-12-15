@@ -1,6 +1,6 @@
 # ThrottledQueue
 
-[See documentation here!](https://hexdocs.pm/throttled_queue/0.1.0-dev/api-reference.html)
+[See documentation here!](https://hexdocs.pm/throttled_queue/api-reference.html)
 
 Simple throttled queue with live status updates.
 
@@ -12,7 +12,7 @@ informed of the status of the enqueued item through its lifecycle.
 ```elixir
 def deps do
   [
-    {:throttled_queue, "~> 0.1.0-dev"},
+    {:throttled_queue, "~> 0.3.0-dev"},
   ]
 end
 ```
