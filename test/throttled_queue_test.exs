@@ -76,6 +76,33 @@ defmodule ThrottledQueueTest do
     :error = ThrottledQueue.enqueue(fn -> :foobar end)
   end
 
+  test "ThrottledQueue.clear clears the queue" do
+    {:ok, _pid} = ThrottledQueue.start_link(wait: 1000)
+
+    ThrottledQueue.enqueue(fn -> :foo end)
+    ThrottledQueue.enqueue(fn -> :bar end)
+
+    queue_state = state(:sys.get_status(ThrottledQueue))
+    %{
+      last_dequeued: nil,
+      max_queue: 10000,
+      pending: %{},
+      queue: [_action1, _action2],
+      wait: 1000
+    } = queue_state
+
+    ThrottledQueue.clear
+
+    queue_state = state(:sys.get_status(ThrottledQueue))
+    %{
+      last_dequeued: nil,
+      max_queue: 10000,
+      pending: %{},
+      queue: [],
+      wait: 1000,
+    } = queue_state
+  end
+
   defp state(info) do
     {_, _, _, status} = info
     [_, _, _, _, [_, _, {:data, [{'State', state}]}]] = status

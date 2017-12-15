@@ -6,7 +6,7 @@ defmodule ThrottledQueue.Mixfile do
       app: :throttled_queue,
       package: package(),
       description: "A simple throttled queue built on top of GenServer with status updates.",
-      version: "0.2.0-dev",
+      version: "0.3.0-dev",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
       deps: deps(),

@@ -40,7 +40,7 @@ defmodule ThrottledQueue do
 
   use GenServer
 
-  @name __MODULE__
+  @default_name __MODULE__
   @default_wait 500
   @default_max_queue 10_000
 
@@ -70,8 +70,8 @@ defmodule ThrottledQueue do
 
   """
   def start_link(opts \\ []) do
-    opts = get_opts(opts)
-    GenServer.start_link(@name, initial_state(opts), name: Keyword.get(opts, :name))
+    {name, opts} = Keyword.pop(opts, :name, @default_name)
+    GenServer.start_link(__MODULE__, initial_state(opts), name: name)
   end
 
   @doc """
@@ -82,29 +82,22 @@ defmodule ThrottledQueue do
     - `name`: Atom. Identifier for the queue. Defaults to **ThrottledQueue** (optional).
     - `wait`: Integer. The wait time between actions in milliseconds. Defaults to 500.
     - `max_queue`: Integer. The maximum number of items in the queue. Defaults to 10_000
-
   """
   def start(opts \\ []) do
-    opts = get_opts(opts)
-    GenServer.start(@name, initial_state(opts), name: Keyword.get(opts, :name))
-  end
-
-  defp get_opts(opts) do
-    [
-      max_queue: @default_max_queue,
-      wait: @default_wait,
-      name: @name,
-    ] |> Keyword.merge(opts)
+    {name, opts} = Keyword.pop(opts, :name, @default_name)
+    GenServer.start(__MODULE__, initial_state(opts), name: name)
   end
 
   def initial_state(opts) do
+    opts = Enum.into(opts, %{})
+
     %{
       last_dequeued: nil,
       queue: [],
       pending: %{},
-      wait: Keyword.get(opts, :wait),
-      max_queue: Keyword.get(opts, :max_queue),
-    }
+      wait: @default_wait,
+      max_queue: @default_max_queue,
+    } |> Map.merge(opts)
   end
 
   @doc """
@@ -112,7 +105,7 @@ defmodule ThrottledQueue do
 
   ## Parameters
 
-    - `name`: Atom to identify the queue. Defaults to **#{@name}** (optional).
+    - `name`: Atom to identify the queue. Defaults to **#{@default_name}** (optional).
     - `action`: Function to enqueue.
 
   ## Returns
@@ -129,13 +122,17 @@ defmodule ThrottledQueue do
       :error
 
   """
-  def enqueue(name \\ @name, action) do
+  def enqueue(name \\ @default_name, action) do
     GenServer.call(name, {:enqueue, action})
   end
 
   def init(state) do
     Process.flag(:trap_exit, true)
     {:ok, state}
+  end
+
+  def clear(name \\ @default_name) do
+    GenServer.call(name, :clear)
   end
 
   def handle_call({:enqueue, action}, {from, ref}, %{max_queue: max_queue, queue: queue} = state) do
@@ -151,6 +148,13 @@ defmodule ThrottledQueue do
       true ->
         {:reply, {:ok, ref, len}, %{state | queue: new_queue}}
     end
+  end
+
+  def handle_call(:clear, _from, state) do
+    {:reply, :ok, Map.merge(state, %{
+      queue: [],
+      pending: %{},
+    }) |> initial_state}
   end
 
   def handle_cast(:dequeue, %{wait: wait, last_dequeued: last_dequeued} = state) do
