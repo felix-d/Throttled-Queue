@@ -88,7 +88,7 @@ defmodule ThrottledQueue do
     GenServer.start(__MODULE__, initial_state(opts), name: name)
   end
 
-  def initial_state(opts) do
+  defp initial_state(opts) do
     opts = Enum.into(opts, %{})
 
     %{
@@ -151,6 +151,26 @@ defmodule ThrottledQueue do
     GenServer.call(name, :clear)
   end
 
+  @doc """
+  Removes items the queue enqueued by `from`.
+
+  ## Parameters
+
+    - `name`: Atom to identify the queue. Defaults to **#{@default_name}** (optional).
+    - `from`: Pid of the process that enqueued the items we want to remove. (required).
+
+  ## Examples
+
+      iex> ThrottledQueue.start_link(max_queue: 2)
+      iex> ThrottledQueue.enqueue(fn -> :foo end)
+      iex> ThrottledQueue.enqueue(fn -> :bar end)
+      iex> ThrottledQueue.remove(from: self())
+      :ok
+  """
+  def remove(name \\ @default_name, from: from) do
+    GenServer.call(name, {:remove, from})
+  end
+
   def handle_call({:enqueue, action}, {from, ref}, %{max_queue: max_queue, queue: queue} = state) do
     len = length(queue)
     new_queue = queue ++ [%Item{action: action, ref: ref, from: from}]
@@ -164,6 +184,11 @@ defmodule ThrottledQueue do
       true ->
         {:reply, {:ok, ref, len}, %{state | queue: new_queue}}
     end
+  end
+
+  def handle_call({:remove, from}, _from, %{queue: queue} = state) do
+    queue = Enum.reject(queue, fn %Item{from: item_from} -> item_from == from end)
+    {:reply, :ok, %{state | queue: queue}}
   end
 
   def handle_call(:clear, _from, state) do

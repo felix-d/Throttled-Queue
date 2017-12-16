@@ -103,6 +103,38 @@ defmodule ThrottledQueueTest do
     } = queue_state
   end
 
+  test ".remove(from: pid) removes items enqueued from pid" do
+    {:ok, _pid} = ThrottledQueue.start_link(wait: 1000)
+
+    ThrottledQueue.enqueue(fn -> :foo end)
+
+    %Task{pid: task_pid} = task = Task.async(fn ->
+      ThrottledQueue.enqueue(fn -> :bar end)
+    end)
+
+    Task.await(task)
+
+    queue_state = state(:sys.get_status(ThrottledQueue))
+    %{
+      last_dequeued: nil,
+      max_queue: 10000,
+      pending: %{},
+      queue: [_action1, _action2],
+      wait: 1000
+    } = queue_state
+
+    ThrottledQueue.remove(from: self())
+
+    queue_state = state(:sys.get_status(ThrottledQueue))
+    %{
+      last_dequeued: nil,
+      max_queue: 10000,
+      pending: %{},
+      queue: [%ThrottledQueue.Item{from: ^task_pid}],
+      wait: 1000
+    } = queue_state
+  end
+
   defp state(info) do
     {_, _, _, status} = info
     [_, _, _, _, [_, _, {:data, [{'State', state}]}]] = status
